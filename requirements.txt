@@ -24,9 +24,6 @@ passlib[bcrypt]==1.7.4
 python-dotenv==1.0.0
 pydantic-settings==2.0.3
 
-# HTTP client for testing
-httpx==0.25.2
-
 # Logging
 structlog==23.2.0
 

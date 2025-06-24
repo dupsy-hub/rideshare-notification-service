@@ -1,6 +1,6 @@
 """Configuration settings for the Notification Service."""
 
-from pydantic import BaseSettings
+from pydantic_settings import BaseSettings
 from typing import Optional
 
 
