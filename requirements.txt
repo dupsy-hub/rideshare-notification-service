@@ -7,9 +7,8 @@ asyncpg==0.29.0
 sqlalchemy[asyncio]==2.0.23
 alembic==1.12.1
 
-# Redis for queuing
-redis==5.0.1
-aioredis==2.0.1
+# Redis for queuing - Updated for Python 3.11 compatibility
+redis[hiredis]==5.0.1
 
 # External service providers
 sendgrid==6.10.0

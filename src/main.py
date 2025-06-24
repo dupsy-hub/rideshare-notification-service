@@ -47,6 +47,10 @@ logger = structlog.get_logger()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan events."""
+    # Initialize variables
+    worker_task = None
+    redis_connected = False
+    
     # Startup
     logger.info("Starting Notification Service", version=settings.app_version)
     
@@ -57,6 +61,7 @@ async def lifespan(app: FastAPI):
         
         # Connect to Redis
         await redis_client.connect()
+        redis_connected = True
         logger.info("Redis connected successfully")
         
         # Start queue worker in background
@@ -73,17 +78,19 @@ async def lifespan(app: FastAPI):
         # Shutdown
         logger.info("Shutting down Notification Service")
         
-        # Stop queue worker
-        await queue_service.stop_worker()
-        worker_task.cancel()
+        # Stop queue worker if it was started
+        if worker_task is not None:
+            await queue_service.stop_worker()
+            worker_task.cancel()
+            
+            try:
+                await worker_task
+            except asyncio.CancelledError:
+                pass
         
-        try:
-            await worker_task
-        except asyncio.CancelledError:
-            pass
-        
-        # Disconnect Redis
-        await redis_client.disconnect()
+        # Disconnect Redis if it was connected
+        if redis_connected:
+            await redis_client.disconnect()
         
         logger.info("Notification Service stopped")
 

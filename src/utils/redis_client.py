@@ -1,6 +1,6 @@
 """Redis client and connection management."""
 
-import aioredis
+import redis.asyncio as redis
 import json
 import logging
 from typing import Optional, Any
@@ -13,12 +13,12 @@ class RedisClient:
     """Redis client wrapper for queue operations."""
     
     def __init__(self):
-        self.redis: Optional[aioredis.Redis] = None
+        self.redis: Optional[redis.Redis] = None
     
     async def connect(self):
         """Connect to Redis."""
         try:
-            self.redis = aioredis.from_url(
+            self.redis = redis.from_url(
                 settings.redis_url,
                 encoding="utf-8",
                 decode_responses=True
@@ -33,7 +33,7 @@ class RedisClient:
     async def disconnect(self):
         """Disconnect from Redis."""
         if self.redis:
-            await self.redis.close()
+            await self.redis.aclose()
             logger.info("Disconnected from Redis")
     
     async def enqueue(self, queue_name: str, data: dict) -> bool:
