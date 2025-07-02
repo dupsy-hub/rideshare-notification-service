@@ -101,8 +101,10 @@ app = FastAPI(
     version=settings.app_version,
     description="RideShare Pro Notification Service - Handle email and push notifications",
     lifespan=lifespan,
-    docs_url="/docs" if settings.debug else None,
-    redoc_url="/redoc" if settings.debug else None,
+    docs_url="/docs",  #if settings.debug else None,
+    redoc_url="/redoc", #if settings.debug else None,
+    openapi_url="/openapi.json", 
+    debug=settings.debug,
 )
 
 # Add CORS middleware
