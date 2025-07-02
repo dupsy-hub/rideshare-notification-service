@@ -27,6 +27,9 @@ jobs:
       with:
         creds: ${{ secrets.AZURE_CREDENTIALS }}
 
+    - name: ACR Login
+      run: az acr login --name $ACR_NAME
+
     - name: Set AKS context
       uses: azure/aks-set-context@v3
       with:
