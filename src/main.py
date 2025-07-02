@@ -105,6 +105,7 @@ app = FastAPI(
     redoc_url="/redoc", #if settings.debug else None,
     openapi_url="/openapi.json", 
     debug=settings.debug,
+    root_path="/api/rides"
 )
 
 # Add CORS middleware
