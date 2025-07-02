@@ -5,6 +5,7 @@ from sqlalchemy.pool import NullPool
 from src.config.settings import settings
 from src.models.notification import Base
 import logging
+from sqlalchemy import text
 
 logger = logging.getLogger(__name__)
 
@@ -57,13 +58,13 @@ async def drop_tables():
     except Exception as e:
         logger.error(f"Error dropping database tables: {e}")
         raise
-
-
+    
+    
 async def health_check() -> bool:
     """Check database connectivity."""
     try:
         async with AsyncSessionLocal() as session:
-            await session.execute("SELECT 1")
+            await session.execute(text("SELECT 1"))
         return True
     except Exception as e:
         logger.error(f"Database health check failed: {e}")
