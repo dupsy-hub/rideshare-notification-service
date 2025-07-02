@@ -11,8 +11,9 @@ env:
   ACR_NAME: teleiostejiriacr                    
   AKS_RESOURCE_GROUP: teleios-tejiri-rg
   AKS_CLUSTER_NAME: rideshare-aks
-  CONTAINER_NAME: notify-service        
+  CONTAINER_NAME: notification-service        
   IMAGE_TAG: ${{ github.sha }}
+  DEPLOYMENT_NAME: notify-service
 
 jobs:
   build-and-deploy:
@@ -47,4 +48,4 @@ jobs:
     - name: Deploy to AKS
       if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/heads/release')
       run: |
-        kubectl set image deployment/$CONTAINER_NAME $CONTAINER_NAME=$ACR_NAME.azurecr.io/$CONTAINER_NAME:$IMAGE_TAG -n microservices
+        kubectl set image deployment/$DEPLOYMENT_NAME $CONTAINER_NAME=$ACR_NAME.azurecr.io/$CONTAINER_NAME:$IMAGE_TAG -n microservices
