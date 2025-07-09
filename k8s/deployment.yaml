@@ -40,12 +40,12 @@ spec:
               memory: "200Mi"
               cpu: "200m"
 
-          # readinessProbe:
-          #   httpGet:
-          #     path: /health/
-          #     port: 8000
-          #   initialDelaySeconds: 5
-          #   periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health/
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 10
 
       volumes:
         - name: firebase-credentials
