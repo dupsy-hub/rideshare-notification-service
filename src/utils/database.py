@@ -15,6 +15,7 @@ engine = create_async_engine(
     echo=settings.debug,
     poolclass=NullPool,  # Disable connection pooling for simplicity
     future=True
+    connect_args={"ssl": "require"}
 )
 
 # Create session factory
