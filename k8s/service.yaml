@@ -2,7 +2,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: notification-service
-  namespace: microservices
+  namespace: rideshare
 spec:
   selector:
     app: notification-app
