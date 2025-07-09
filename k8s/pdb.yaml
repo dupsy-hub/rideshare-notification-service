@@ -2,9 +2,9 @@ apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   name: notification-service-pdb
-  namespace: microservices
+  namespace: rideshare
 spec:
   minAvailable: 1
   selector:
     matchLabels:
-      app: notification-app
+      app: notification-service
