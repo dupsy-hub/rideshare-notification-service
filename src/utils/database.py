@@ -4,7 +4,17 @@ from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sess
 from sqlalchemy.pool import NullPool
 #from src.config.settings import settings
 from src.config.settings import Settings
-settings = Settings()
+def get_engine():
+    settings = Settings()  # loaded at runtime
+    return create_async_engine(
+        settings.database_url,
+        echo=settings.debug,
+        poolclass=NullPool,
+        future=True
+    )
+
+engine = get_engine()
+
 
 from src.models.notification import Base
 import logging
@@ -13,12 +23,12 @@ from sqlalchemy import text
 logger = logging.getLogger(__name__)
 
 # Create async engine (without SSL context)
-engine = create_async_engine(
-    settings.database_url,  # Ensure this has no ?sslmode or ?ssl params
-    echo=settings.debug,
-    poolclass=NullPool,
-    future=True
-)
+# engine = create_async_engine(
+#     settings.database_url,  # Ensure this has no ?sslmode or ?ssl params
+#     echo=settings.debug,
+#     poolclass=NullPool,
+#     future=True
+# )
 
 # Create session factory
 AsyncSessionLocal = async_sessionmaker(
