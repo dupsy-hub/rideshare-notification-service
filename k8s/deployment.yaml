@@ -3,8 +3,15 @@ kind: Deployment
 metadata:
   name: notification-service
   namespace: rideshare
+  labels:
+    app: notification-service
 spec:
   replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 1
   selector:
     matchLabels:
       app: notification-service
@@ -13,25 +20,68 @@ spec:
       labels:
         app: notification-service
     spec:
+      imagePullSecrets:
+        - name: acr-auth
+
       containers:
         - name: notification-service
           image: teleiosdupeacr01.azurecr.io/notification-service:latest
+          imagePullPolicy: Always
           ports:
             - containerPort: 8000
-
-          envFrom:
-            - secretRef:
-                name: notification-service-secrets
-
+        - name: debug-shell
+          image: alpine:latest
+          command: ["sleep", "999999"]
+          resources:
+            requests:
+              memory: "20Mi"
+              cpu: "10m"
+            limits:
+              memory: "50Mi"
+              cpu: "25m"
           env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: notification-service-secrets
+                  key: DATABASE_URL
+            - name: JWT_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: notification-service-secrets
+                  key: JWT_SECRET_KEY
+            - name: REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: notification-service-secrets
+                  key: REDIS_URL
+            - name: SENDGRID_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: notification-service-secrets
+                  key: SENDGRID_API_KEY
+            - name: SENDGRID_FROM_EMAIL
+              valueFrom:
+                secretKeyRef:
+                  name: notification-service-secrets
+                  key: SENDGRID_FROM_EMAIL
+            - name: FIREBASE_PROJECT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: notification-service-secrets
+                  key: FIREBASE_PROJECT_ID
             - name: FIREBASE_CREDENTIALS_PATH
-              value: /app/firebase/firebase-credentials.json
-
+              valueFrom:
+                secretKeyRef:
+                  name: notification-service-secrets
+                  key: FIREBASE_CREDENTIALS_PATH
           volumeMounts:
             - name: firebase-credentials
-              mountPath: /app/firebase
+              mountPath: /app/firebase/firebase-credentials.json
+              subPath: firebase-credentials.json
               readOnly: true
-
+            - name: firebase-credentials
+              mountPath: /debug/firebase
           resources:
             requests:
               memory: "150Mi"
@@ -40,14 +90,10 @@ spec:
               memory: "200Mi"
               cpu: "200m"
 
-          # readinessProbe:
-          #   httpGet:
-          #     path: /health/
-          #     port: 8000
-          #   initialDelaySeconds: 5
-          #   periodSeconds: 10
-
       volumes:
         - name: firebase-credentials
           secret:
-            secretName: firebase-credentials
+            secretName: notification-service-secrets
+            items:
+              - key: firebase-credentials.json
+                path: firebase-credentials.json

@@ -1,4 +1,5 @@
 """Main FastAPI application for the Notification Service."""
+app = FastAPI(lifespan=lifespan)  # Create first with minimal config
 
 import asyncio
 import logging
@@ -10,7 +11,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import structlog
 
-from src.config.settings import settings
+#from src.config.settings import settings
+#from src.config.settings import Settings
+from src.config.settings import Settings  # ✅ Only import the class
+settings: Settings | None = None         # ✅ Declare the global placeholder
+
+
 from src.routes import notifications, health
 from src.utils.database import create_tables
 from src.utils.redis_client import redis_client
@@ -35,24 +41,52 @@ structlog.configure(
 )
 
 # Set up logging
+# logging.basicConfig(
+#     format="%(message)s",
+#     stream=sys.stdout,
+#     level=getattr(logging, settings.log_level.upper()),
+# )
 logging.basicConfig(
     format="%(message)s",
     stream=sys.stdout,
-    level=getattr(logging, settings.log_level.upper()),
+    level=logging.INFO  # Use default until settings is loaded
 )
 
 logger = structlog.get_logger()
 
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan events."""
-    # Initialize variables
-    worker_task = None
-    redis_connected = False
+    global settings
+    settings = Settings()  # ✅ Now safe to load env vars
+    app.title = settings.app_name
+    app.version = settings.app_version
+    app.description = "RideShare Pro Notification Service - Handle email and push notifications"
+    app.debug = settings.debug
+
+    # Docs URLs
+    app.docs_url = "/docs" if settings.debug else None
+    app.redoc_url = "/redoc" if settings.debug else None
+    app.openapi_url = "/openapi.json"
+
     
-    # Startup
+
     logger.info("Starting Notification Service", version=settings.app_version)
+
+    # Adjust logging level dynamically
+    logging.getLogger().setLevel(getattr(logging, settings.log_level.upper()))
+    
+    # Proceed with startup routines...
+
+# @asynccontextmanager
+# async def lifespan(app: FastAPI):
+#     """Application lifespan events."""
+#     # Initialize variables
+#     worker_task = None
+#     redis_connected = False
+    
+#     # Startup
+#     logger.info("Starting Notification Service", version=settings.app_version)
     
     try:
         # Initialize database
@@ -96,17 +130,22 @@ async def lifespan(app: FastAPI):
 
 
 # Create FastAPI application
+# app = FastAPI(
+#     title=settings.app_name,
+#     version=settings.app_version,
+#     description="RideShare Pro Notification Service - Handle email and push notifications",
+#     lifespan=lifespan,
+#     docs_url="/docs",  #if settings.debug else None,
+#     redoc_url="/redoc", #if settings.debug else None,
+#     openapi_url="/openapi.json", 
+#     debug=settings.debug,
+#     root_path="/api/notifications"
+# )
 app = FastAPI(
-    title=settings.app_name,
-    version=settings.app_version,
-    description="RideShare Pro Notification Service - Handle email and push notifications",
     lifespan=lifespan,
-    docs_url="/docs",  #if settings.debug else None,
-    redoc_url="/redoc", #if settings.debug else None,
-    openapi_url="/openapi.json", 
-    debug=settings.debug,
-    root_path="/api/notifications"
+    root_path="/api/notifications"  # You can leave this here
 )
+
 
 # Add CORS middleware
 app.add_middleware(
@@ -188,7 +227,9 @@ app.include_router(notifications.router)
 
 @app.get("/")
 async def root():
-    """Root endpoint."""
+    if settings is None:
+        return {"status": "booting"}
+    #"""Root endpoint."""
     return {
         "service": settings.app_name,
         "version": settings.app_version,
