@@ -2,33 +2,22 @@
 
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.pool import NullPool
-#from src.config.settings import settings
-from src.config.settings import Settings
-def get_engine():
-    settings = Settings()  # loaded at runtime
-    return create_async_engine(
-        settings.database_url,
-        echo=settings.debug,
-        poolclass=NullPool,
-        future=True
-    )
-
-engine = get_engine()
-
-
+from src.config.settings import settings
 from src.models.notification import Base
 import logging
 from sqlalchemy import text
 
 logger = logging.getLogger(__name__)
 
-# Create async engine (without SSL context)
-# engine = create_async_engine(
-#     settings.database_url,  # Ensure this has no ?sslmode or ?ssl params
-#     echo=settings.debug,
-#     poolclass=NullPool,
-#     future=True
-# )
+# Create async engine
+engine = create_async_engine(
+    settings.database_url,
+    echo=settings.debug,
+    poolclass=NullPool,  # Disable connection pooling for simplicity
+    future=True,
+    connect_args={"ssl": True}
+
+)
 
 # Create session factory
 AsyncSessionLocal = async_sessionmaker(
@@ -71,8 +60,8 @@ async def drop_tables():
     except Exception as e:
         logger.error(f"Error dropping database tables: {e}")
         raise
-
-
+    
+    
 async def health_check() -> bool:
     """Check database connectivity."""
     try:

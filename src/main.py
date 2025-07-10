@@ -10,17 +10,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import structlog
 
-# Internal modules
-from src.config.settings import Settings
+from src.config.settings import settings
 from src.routes import notifications, health
 from src.utils.database import create_tables
 from src.utils.redis_client import redis_client
 from src.services.queue_service import queue_service
 
-# 🌱 Declare global settings instance
-settings: Settings | None = None
-
-# ⚙️ Configure structured logging
+# Configure structured logging
 structlog.configure(
     processors=[
         structlog.stdlib.filter_by_level,
@@ -38,110 +34,140 @@ structlog.configure(
     cache_logger_on_first_use=True,
 )
 
+# Set up logging
 logging.basicConfig(
     format="%(message)s",
     stream=sys.stdout,
-    level=logging.INFO  # Will be updated after settings is loaded
+    level=getattr(logging, settings.log_level.upper()),
 )
 
 logger = structlog.get_logger()
 
-# 🔄 Lifespan events for startup and shutdown
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global settings
-    settings = Settings()
-
-    # Metadata setup
-    app.title = settings.app_name
-    app.version = settings.app_version
-    app.description = "RideShare Pro Notification Service - Handles email and push notifications"
-    app.debug = settings.debug
-    app.docs_url = "/docs" if settings.debug else None
-    app.redoc_url = "/redoc" if settings.debug else None
-    app.openapi_url = "/openapi.json"
-
-    # Dynamic logging level
-    logging.getLogger().setLevel(getattr(logging, settings.log_level.upper()))
-    logger.info("Starting Notification Service", version=settings.app_version)
-
-    # 🔧 Startup routines
-    redis_connected = False
+    """Application lifespan events."""
+    # Initialize variables
     worker_task = None
-
+    redis_connected = False
+    
+    # Startup
+    logger.info("Starting Notification Service", version=settings.app_version)
+    
     try:
+        # Initialize database
         await create_tables()
         logger.info("Database initialized successfully")
-
+        
+        # Connect to Redis
         await redis_client.connect()
         redis_connected = True
         logger.info("Redis connected successfully")
-
+        
+        # Start queue worker in background
         worker_task = asyncio.create_task(queue_service.start_worker())
         logger.info("Queue worker started")
-
-        yield  # Run the app
-
+        
+        yield
+        
     except Exception as e:
         logger.error("Failed to start application", error=str(e))
         raise
-
+    
     finally:
+        # Shutdown
         logger.info("Shutting down Notification Service")
-
-        if worker_task:
+        
+        # Stop queue worker if it was started
+        if worker_task is not None:
             await queue_service.stop_worker()
             worker_task.cancel()
+            
             try:
                 await worker_task
             except asyncio.CancelledError:
                 pass
-
+        
+        # Disconnect Redis if it was connected
         if redis_connected:
             await redis_client.disconnect()
-
+        
         logger.info("Notification Service stopped")
 
-# 🚀 Initialize FastAPI app
+
+# Create FastAPI application
 app = FastAPI(
+    title=settings.app_name,
+    version=settings.app_version,
+    description="RideShare Pro Notification Service - Handle email and push notifications",
     lifespan=lifespan,
+    docs_url="/docs",  #if settings.debug else None,
+    redoc_url="/redoc", #if settings.debug else None,
+    openapi_url="/openapi.json", 
+    debug=settings.debug,
     root_path="/api/notifications"
 )
 
-# 🌍 CORS middleware setup
+# Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # You should restrict this in production
+    allow_origins=["*"],  # Configure this properly for production
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# 📜 Request logging middleware
+
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
+    """Log all HTTP requests."""
     start_time = asyncio.get_event_loop().time()
+    
+    # Generate correlation ID
     correlation_id = request.headers.get("x-correlation-id", f"req-{id(request)}")
-
-    logger.info("HTTP request started", method=request.method, url=str(request.url), correlation_id=correlation_id)
-
+    
+    # Log request
+    logger.info(
+        "HTTP request started",
+        method=request.method,
+        url=str(request.url),
+        correlation_id=correlation_id,
+    )
+    
+    # Process request
     response = await call_next(request)
-
+    
+    # Calculate duration
     duration = asyncio.get_event_loop().time() - start_time
-
-    logger.info("HTTP request completed", method=request.method, url=str(request.url),
-                status_code=response.status_code, duration=f"{duration:.3f}s", correlation_id=correlation_id)
-
+    
+    # Log response
+    logger.info(
+        "HTTP request completed",
+        method=request.method,
+        url=str(request.url),
+        status_code=response.status_code,
+        duration=f"{duration:.3f}s",
+        correlation_id=correlation_id,
+    )
+    
+    # Add correlation ID to response headers
     response.headers["x-correlation-id"] = correlation_id
+    
     return response
 
-# 🛑 Global exception handler
+
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
+    """Global exception handler."""
     correlation_id = request.headers.get("x-correlation-id", f"req-{id(request)}")
-
-    logger.error("Unhandled exception", error=str(exc), correlation_id=correlation_id, exc_info=True)
-
+    
+    logger.error(
+        "Unhandled exception",
+        error=str(exc),
+        correlation_id=correlation_id,
+        exc_info=True,
+    )
+    
     return JSONResponse(
         status_code=500,
         content={
@@ -154,15 +180,15 @@ async def global_exception_handler(request: Request, exc: Exception):
         headers={"x-correlation-id": correlation_id},
     )
 
-# 📦 Register routes
+
+# Include routers
 app.include_router(health.router)
 app.include_router(notifications.router)
 
-# 🧭 Root endpoint
+
 @app.get("/")
 async def root():
-    if settings is None:
-        return {"status": "booting"}
+    """Root endpoint."""
     return {
         "service": settings.app_name,
         "version": settings.app_version,
@@ -170,14 +196,14 @@ async def root():
         "docs": "/docs" if settings.debug else "disabled",
     }
 
-# 🧨 Entry point
+
 if __name__ == "__main__":
     import uvicorn
-
+    
     uvicorn.run(
         "main:app",
         host="0.0.0.0",
         port=8000,
-        reload=False,  # Avoid settings.debug here unless it’s loaded safely
-        log_config=None,
+        reload=settings.debug,
+        log_config=None,  # Use our custom logging
     )
