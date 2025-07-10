@@ -2,7 +2,10 @@
 
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.pool import NullPool
-from src.config.settings import settings
+#from src.config.settings import settings
+from src.config.settings import Settings
+settings = Settings()
+
 from src.models.notification import Base
 import logging
 from sqlalchemy import text
