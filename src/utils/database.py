@@ -9,11 +9,11 @@ from sqlalchemy import text
 
 logger = logging.getLogger(__name__)
 
-# Create async engine
+# Create async engine (without SSL context)
 engine = create_async_engine(
-    settings.database_url,
+    settings.database_url,  # Ensure this has no ?sslmode or ?ssl params
     echo=settings.debug,
-    poolclass=NullPool,  # Disable connection pooling for simplicity
+    poolclass=NullPool,
     future=True
 )
 
@@ -58,8 +58,8 @@ async def drop_tables():
     except Exception as e:
         logger.error(f"Error dropping database tables: {e}")
         raise
-    
-    
+
+
 async def health_check() -> bool:
     """Check database connectivity."""
     try:

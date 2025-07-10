@@ -64,6 +64,20 @@ jobs:
             --namespace=$NAMESPACE \
             --dry-run=client -o yaml | kubectl apply -f -
 
+      - name: ❗ Fail if DATABASE_URL contains newline
+        run: |
+          VALUE=$(kubectl get secret notification-service-secrets -n $NAMESPACE -o jsonpath="{.data.DATABASE_URL}" | base64 --decode)
+          if [[ "$VALUE" == *$'\n'* ]]; then
+            echo "❌ DATABASE_URL contains a newline character!"
+            exit 1
+          fi
+
+      # ✅ Verify the secret is clean
+      - name: ✅ Verify DATABASE_URL Secret
+        run: |
+          echo "Decoded DATABASE_URL:"
+          kubectl get secret notification-service-secrets -n $NAMESPACE -o jsonpath="{.data.DATABASE_URL}" | base64 --decode | cat -A
+
       - name: 🔐 Create or Update Firebase Credentials Secret
         run: |
           echo "${{ secrets.FIREBASE_CREDENTIALS_JSON }}" | base64 -d > firebase-credentials.json
