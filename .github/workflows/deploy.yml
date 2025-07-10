@@ -61,6 +61,7 @@ jobs:
             --from-literal=SENDGRID_API_KEY="${{ secrets.SENDGRID_API_KEY }}" \
             --from-literal=SENDGRID_FROM_EMAIL="${{ secrets.SENDGRID_FROM_EMAIL }}" \
             --from-literal=FIREBASE_PROJECT_ID="${{ secrets.FIREBASE_PROJECT_ID }}" \
+            --from-literal=FIREBASE_CREDENTIALS_PATH="/app/firebase/firebase-credentials.json" \
             --namespace=$NAMESPACE \
             --dry-run=client -o yaml | kubectl apply -f -
 
