@@ -29,16 +29,7 @@ spec:
           imagePullPolicy: Always
           ports:
             - containerPort: 8000
-        - name: debug-shell
-          image: alpine:latest
-          command: ["sleep", "999999"]
-          resources:
-            requests:
-              memory: "20Mi"
-              cpu: "10m"
-            limits:
-              memory: "50Mi"
-              cpu: "25m"
+
           env:
             - name: DATABASE_URL
               valueFrom:
@@ -80,8 +71,7 @@ spec:
               mountPath: /app/firebase/firebase-credentials.json
               subPath: firebase-credentials.json
               readOnly: true
-            - name: firebase-credentials
-              mountPath: /debug/firebase
+
           resources:
             requests:
               memory: "150Mi"
@@ -93,7 +83,7 @@ spec:
       volumes:
         - name: firebase-credentials
           secret:
-            secretName: notification-service-secrets
+            secretName: firebase-credentials
             items:
               - key: firebase-credentials.json
                 path: firebase-credentials.json
