@@ -31,6 +31,7 @@ spec:
             - containerPort: 8000
 
           env:
+            # 🔐 App-level secret values
             - name: DATABASE_URL
               valueFrom:
                 secretKeyRef:
@@ -44,8 +45,15 @@ spec:
             - name: REDIS_URL
               valueFrom:
                 secretKeyRef:
-                  name: notification-service-secrets
+                  name: rideshare-secrets
                   key: REDIS_URL
+
+            # - name: NOTIFY_REDIS_URL
+            #   valueFrom:
+            #     secretKeyRef:
+            #       name: notification-service-secrets
+            #       key: REDIS_URL
+
             - name: SENDGRID_API_KEY
               valueFrom:
                 secretKeyRef:
@@ -66,6 +74,19 @@ spec:
                 secretKeyRef:
                   name: notification-service-secrets
                   key: FIREBASE_CREDENTIALS_PATH
+
+            # 🔧 Infra-level metadata
+            - name: NOTIFY_DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: rideshare-secrets
+                  key: NOTIFY_DATABASE_URL
+
+            - name: AKS_RESOURCE_GROUP
+              value: teleios-dupe-rg
+            - name: AKS_CLUSTER_NAME
+              value: rideshare-aks-cluster
+
           volumeMounts:
             - name: firebase-credentials
               mountPath: /app/firebase/firebase-credentials.json
